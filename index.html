@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#F2B705">
+  <title>Pare ou Siga — Conservação</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+  <!-- ===================== HOME ===================== -->
+  <section id="view-home" class="view active">
+    <div class="hero">
+      <div class="semaforo" aria-hidden="true">
+        <span class="luz vermelho"></span>
+        <span class="luz amarelo"></span>
+        <span class="luz verde"></span>
+      </div>
+      <h1>PARE<span>ou</span>SIGA</h1>
+      <p class="hero-sub">Auditoria de Conservação Rodoviária</p>
+      <p class="hero-org">Caminhos da Celulose</p>
+    </div>
+
+    <nav class="menu">
+      <button id="home-nova" class="menu-btn principal">
+        <span class="mb-ico">&#9873;</span><span class="mb-txt">Nova auditoria</span>
+      </button>
+      <button id="home-painel" class="menu-btn">
+        <span class="mb-ico">&#9636;</span><span class="mb-txt">Painel geral</span>
+      </button>
+      <button id="home-empresas" class="menu-btn">
+        <span class="mb-ico">&#9650;</span><span class="mb-txt">Indicadores por empresa</span>
+      </button>
+      <button id="home-pendentes" class="menu-btn">
+        <span class="mb-ico">&#9776;</span><span class="mb-txt">Auditorias registradas</span>
+      </button>
+      <button id="home-export" class="menu-btn">
+        <span class="mb-ico">&#8595;</span><span class="mb-txt">Exportações</span>
+      </button>
+      <button id="home-config" class="menu-btn discreto">
+        <span class="mb-ico">&#9881;</span><span class="mb-txt">Empresas / Contratos</span>
+      </button>
+    </nav>
+    <footer class="rodape-app">Funciona offline • Dados no dispositivo</footer>
+  </section>
+
+  <!-- ===================== TELAS DINÂMICAS ===================== -->
+  <section id="view-nova" class="view"></section>
+  <section id="view-checklist" class="view"></section>
+  <section id="view-detalhe" class="view"></section>
+  <section id="view-config" class="view"></section>
+
+  <!-- ===================== PAINEL GERAL ===================== -->
+  <section id="view-painel" class="view"></section>
+
+  <!-- ===================== INDICADORES POR EMPRESA ===================== -->
+  <section id="view-empresas" class="view"></section>
+
+  <!-- ===================== AUDITORIAS REGISTRADAS ===================== -->
+  <section id="view-pendentes" class="view">
+    <header class="topo">
+      <button class="btn-voltar" onclick="irPara('home')" aria-label="Voltar">&#8592;</button>
+      <h2>Auditorias registradas</h2>
+    </header>
+    <div id="lista-auditorias" class="lista-auditorias"></div>
+  </section>
+
+  <!-- ===================== EXPORTAÇÕES ===================== -->
+  <section id="view-exportacoes" class="view">
+    <header class="topo">
+      <button class="btn-voltar" onclick="irPara('home')" aria-label="Voltar">&#8592;</button>
+      <h2>Exportações</h2>
+    </header>
+    <p id="exp-info" class="ajuda"></p>
+    <div class="exp-grid">
+      <button class="exp-card" onclick="exportarExcel()">
+        <span class="exp-ico verde">&#9636;</span>
+        <strong>Planilha Excel</strong>
+        <small>Todas as auditorias item a item (.xlsx)</small>
+      </button>
+      <button class="exp-card" onclick="exportarFotos()">
+        <span class="exp-ico amarelo">&#128247;</span>
+        <strong>Fotos (.zip)</strong>
+        <small>Nomeadas: EMPRESA_RODOVIA_KM_DD-MM-AA_NN.jpg</small>
+      </button>
+    </div>
+  </section>
+
+  <div id="toast" class="toast"></div>
+
+  <!-- Bibliotecas locais (offline) -->
+  <script src="./lib/chart.umd.js"></script>
+  <script src="./lib/xlsx.full.min.js"></script>
+  <script src="./lib/jszip.min.js"></script>
+
+  <!-- Aplicação -->
+  <script src="./database.js"></script>
+  <script src="./dashboard.js"></script>
+  <script src="./sync.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
