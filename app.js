@@ -72,7 +72,7 @@ function irPara(view) {
 async function novaAuditoria() {
   estado = {
     status: "pendente",
-    empresa: "", rodovia: "", km: "", sentido: "",
+    auditor: "", empresa: "", rodovia: "", km: "", sentido: "",
     servico: "", data: hoje(), hora: agora(),
     criadoEm: Date.now(), itens: [],
   };
@@ -94,6 +94,9 @@ async function renderEtapaIdentificacao() {
     <div class="passo-info"><span class="passo-n">1</span> Identificação</div>
 
     <form id="form-ident" class="form-grid" onsubmit="return false">
+      <label>Auditor
+        <input id="f-auditor" type="text" placeholder="Nome de quem está auditando" autocomplete="name" required>
+      </label>
       <label>Empresa
         <select id="f-empresa" required>${`<option value="">Selecione…</option>` + optEmp}</select>
       </label>
@@ -124,6 +127,7 @@ async function renderEtapaIdentificacao() {
   $("#f-hora").value = estado.hora || agora();
   $("#f-sentido").value = estado.sentido || "";
   $("#f-km").value = estado.km || "";
+  $("#f-auditor").value = estado.auditor || "";
 
   // listeners
   $("#f-empresa").addEventListener("change", aplicarFiltrosContratuais);
@@ -215,11 +219,12 @@ async function validarContrato() {
   const srv = $("#f-servico").value;
   const data = $("#f-data").value;
   const hora = $("#f-hora").value;
+  const auditor = ($("#f-auditor")?.value || "").trim();
   const kmRaw = $("#f-km").value.trim();
   const km = normalizarKm(kmRaw);
 
   const problemas = [];
-  const camposObrig = [nome, rod, sen, srv, data, hora].every(Boolean) && kmRaw !== "";
+  const camposObrig = [auditor, nome, rod, sen, srv, data, hora].every(Boolean) && kmRaw !== "";
 
   if (nome) {
     const emp = await DB.empresas.obter(nome);
@@ -264,6 +269,7 @@ async function validarContrato() {
 async function iniciarChecklist() {
   // botão só fica habilitado quando validarContrato() devolve true,
   // então aqui só precisamos snapshotar os valores
+  estado.auditor = ($("#f-auditor")?.value || "").trim();
   estado.empresa = $("#f-empresa").value;
   estado.rodovia = $("#f-rodovia").value;
   estado.km = normalizarKm($("#f-km").value);     // armazena numérico
@@ -306,7 +312,7 @@ function renderChecklist() {
       <h2>Checklist</h2>
     </header>
     <div class="ctx-barra">
-      <span>${estado.empresa}</span><span>${estado.rodovia} • KM ${estado.km}</span><span>${estado.servico}</span>
+      <span>${estado.auditor}</span><span>${estado.empresa}</span><span>${estado.rodovia} • KM ${estado.km}</span><span>${estado.servico}</span>
     </div>
     <div id="checklist-itens">${blocos}</div>
     <div class="rodape-fixo">
@@ -472,7 +478,7 @@ async function listarPendentes() {
           <strong>${a.empresa}</strong>
           <span class="conf-badge ${corConformidade(r.conformidade)}">${r.conformidade}%</span>
         </div>
-        <div class="card-meta">${a.rodovia} • KM ${a.km} • ${a.sentido} • ${a.servico}</div>
+        <div class="card-meta">${a.auditor ? `<strong>${a.auditor}</strong> • ` : ""}${a.rodovia} • KM ${a.km} • ${a.sentido} • ${a.servico}</div>
         <div class="card-meta">${dataBR(a.data)} ${a.hora} ${flag}</div>
         <div class="card-mini">
           <span class="chip verde">${r.conforme}C</span>
@@ -531,6 +537,7 @@ async function verAuditoria(id) {
     </header>
     <div class="det-cab">
       <strong>${a.empresa}</strong>
+      ${a.auditor ? `<div class="card-meta">Auditor: <strong>${a.auditor}</strong></div>` : ""}
       <div class="card-meta">${a.rodovia} • KM ${a.km} • ${a.sentido} • ${a.servico}</div>
       <div class="card-meta">${dataBR(a.data)} ${a.hora}</div>
       <div class="card-mini">
@@ -561,7 +568,7 @@ async function exportarExcel() {
     todas.forEach((a) => {
       a.itens.forEach((i) => {
         linhas.push({
-          Data: dataBR(a.data), Hora: a.hora, Empresa: a.empresa, Rodovia: a.rodovia,
+          Data: dataBR(a.data), Hora: a.hora, Auditor: a.auditor || "", Empresa: a.empresa, Rodovia: a.rodovia,
           KM: a.kmTxt || a.km, Sentido: a.sentido, Serviço: a.servico,
           Categoria: i.categoria, Item: i.item,
           Resultado: i.resultado === "C" ? "Conforme" : i.resultado === "NC" ? "Não Conforme" : "Não Aplicável",
@@ -571,7 +578,7 @@ async function exportarExcel() {
     });
 
     const ws = XLSX.utils.json_to_sheet(linhas);
-    ws["!cols"] = [{ wch: 11 }, { wch: 6 }, { wch: 18 }, { wch: 9 }, { wch: 10 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 22 }, { wch: 14 }, { wch: 40 }];
+    ws["!cols"] = [{ wch: 11 }, { wch: 6 }, { wch: 20 }, { wch: 18 }, { wch: 9 }, { wch: 10 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 22 }, { wch: 14 }, { wch: 40 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Auditorias");
 
