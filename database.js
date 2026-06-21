@@ -97,6 +97,7 @@ const DB = (() => {
   /* ---------- Fotos (blobs) ---------- */
   const fotos = {
     salvar: (f) => add("fotos", f),
+    atualizar: (f) => put("fotos", f),   // usado pelo sync para marcar synced=true
     porAuditoria: (auditId) => getByIndex("fotos", "auditId", auditId),
     listar: () => getAll("fotos"),
     excluir: (id) => del("fotos", id),
