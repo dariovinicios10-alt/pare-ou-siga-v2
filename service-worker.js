@@ -4,7 +4,7 @@
    Estratégia: cache-first com atualização em segundo plano.
    ===================================================================== */
 
-const CACHE = "pare-ou-siga-v4";
+const CACHE = "pare-ou-siga-v5";
 
 const ARQUIVOS = [
   "./",
