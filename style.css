@@ -97,6 +97,37 @@ h1 span {
 
 .rodape-app { text-align: center; color: var(--cinza); font-size: .8rem; margin-top: 22px; }
 
+/* ====================== AUTH / SYNC ====================== */
+.auth-bar {
+  background: var(--branco); border: 1px solid var(--borda); border-radius: var(--raio);
+  padding: 10px 14px; margin-bottom: 14px; box-shadow: var(--sombra);
+}
+.auth-info { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+#auth-user { font-size: .88rem; font-weight: 600; color: var(--asfalto); }
+.btn-auth {
+  min-height: 38px; padding: 6px 16px; border: 1.5px solid var(--amarelo);
+  background: var(--amarelo); color: var(--asfalto); border-radius: 10px;
+  font-weight: 700; font-size: .82rem; cursor: pointer; white-space: nowrap;
+}
+.btn-auth.logado { background: transparent; border-color: var(--borda); color: var(--cinza); }
+
+.sync-bar {
+  font-size: .78rem; font-weight: 600; padding: 6px 0 0; color: var(--cinza);
+}
+.sync-bar.syncing { color: var(--amarelo-esc); }
+.sync-bar.ok { color: var(--verde); }
+.sync-bar.warn { color: var(--amarelo-esc); }
+.sync-bar.erro { color: var(--vermelho); }
+.sync-bar.info { color: var(--cinza); }
+
+.tag-sync {
+  font-size: .72rem; font-weight: 700; padding: 2px 7px; border-radius: 8px;
+  display: inline-block; margin-left: 4px;
+}
+.tag-sync.ok { background: var(--verde-cl); color: #145C33; }
+.tag-sync.erro { background: var(--vermelho-cl); color: #8C1F19; }
+.tag-sync.pendente { background: #FCF1CC; color: var(--amarelo-esc); }
+
 /* ====================== TOPO DAS TELAS ====================== */
 .topo { display: flex; align-items: center; gap: 12px; margin: 4px 0 14px; }
 .topo h2 { margin: 0; font-size: 1.3rem; font-weight: 800; }
