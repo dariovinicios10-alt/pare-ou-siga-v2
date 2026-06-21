@@ -13,6 +13,15 @@
 
   <!-- ===================== HOME ===================== -->
   <section id="view-home" class="view active">
+    <!-- Auth / Sync bar -->
+    <div id="auth-bar" class="auth-bar">
+      <div id="auth-info" class="auth-info">
+        <span id="auth-user">Não conectado</span>
+        <button id="btn-auth" class="btn-auth" onclick="toggleAuth()">Entrar</button>
+      </div>
+      <div id="sync-status" class="sync-bar"></div>
+    </div>
+
     <div class="hero">
       <div class="semaforo" aria-hidden="true">
         <span class="luz vermelho"></span>
@@ -42,6 +51,9 @@
       </button>
       <button id="home-config" class="menu-btn discreto">
         <span class="mb-ico">&#9881;</span><span class="mb-txt">Empresas / Contratos</span>
+      </button>
+      <button id="home-sync" class="menu-btn discreto" hidden>
+        <span class="mb-ico">&#8635;</span><span class="mb-txt">Sincronizar agora</span>
       </button>
     </nav>
     <footer class="rodape-app">Funciona offline • Dados no dispositivo</footer>
@@ -99,6 +111,7 @@
   <!-- Aplicação -->
   <script src="./database.js"></script>
   <script src="./dashboard.js"></script>
+  <script src="./auth.js"></script>
   <script src="./sync.js"></script>
   <script src="./app.js"></script>
 </body>
