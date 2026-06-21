@@ -18,6 +18,7 @@ const Sync = (() => {
   let _siteId = null;
   let _listId = null;
   let _driveId = null;
+  let _fieldMap = null;  // { displayName → internalName }
   let _syncing = false;
 
   /* ==========================================================
@@ -56,6 +57,46 @@ const Sync = (() => {
     _driveId = resp.id;
     await DB.config.salvar("sp_drive_id_fotos", _driveId);
     return _driveId;
+  }
+
+  /* ==========================================================
+     MAPEAMENTO DE NOMES DE COLUNAS (display → internal)
+     O SharePoint pode criar nomes internos diferentes dos
+     nomes visíveis. Essa função descobre automaticamente.
+     ========================================================== */
+  async function resolveFieldMap(token) {
+    if (_fieldMap) return _fieldMap;
+    const cached = await DB.config.obter("sp_field_map_ssma");
+    if (cached) { _fieldMap = cached; return _fieldMap; }
+
+    const siteId = await resolveSiteId(token);
+    const listId = await resolveListId(token);
+
+    // Busca todas as colunas da lista
+    const resp = await graphGet(
+      `/sites/${siteId}/lists/${listId}/columns?$select=name,displayName`, token
+    );
+
+    // Monta mapa: displayName → name (interno)
+    const map = {};
+    (resp.value || []).forEach((col) => {
+      map[col.displayName] = col.name;
+    });
+
+    console.log("SharePoint field map:", map);
+    _fieldMap = map;
+    await DB.config.salvar("sp_field_map_ssma", map);
+    return map;
+  }
+
+  // Traduz um objeto {displayName: valor} → {internalName: valor}
+  function mapearCampos(fields, fieldMap) {
+    const mapped = {};
+    for (const [displayName, valor] of Object.entries(fields)) {
+      const internal = fieldMap[displayName] || displayName;
+      mapped[internal] = valor;
+    }
+    return mapped;
   }
 
   /* ==========================================================
@@ -117,9 +158,12 @@ const Sync = (() => {
   async function syncAuditoria(audit, token) {
     const siteId = await resolveSiteId(token);
     const listId = await resolveListId(token);
+    const fieldMap = await resolveFieldMap(token);
 
     const resumo = audit.resumo || {};
-    const fields = {
+
+    // Monta com nomes de EXIBIÇÃO (display names) da lista
+    const camposDisplay = {
       Title: `AUD-${String(audit.id).padStart(5, "0")}`,
       Auditor: audit.auditor || "",
       Empresa: audit.empresa || "",
@@ -135,6 +179,9 @@ const Sync = (() => {
       QtdNaoAplicavel: resumo.naoAplicavel || 0,
       ItensJSON: JSON.stringify(audit.itens || []),
     };
+
+    // Traduz para nomes INTERNOS do SharePoint
+    const fields = mapearCampos(camposDisplay, fieldMap);
 
     if (audit.spItemId) {
       // Atualiza registro existente
@@ -317,10 +364,11 @@ const Sync = (() => {
      LIMPAR CACHE DE IDs (útil se mudar de site/lista)
      ========================================================== */
   async function limparCache() {
-    _siteId = null; _listId = null; _driveId = null;
+    _siteId = null; _listId = null; _driveId = null; _fieldMap = null;
     await DB.config.salvar("sp_site_id", null);
     await DB.config.salvar("sp_list_id_ssma", null);
     await DB.config.salvar("sp_drive_id_fotos", null);
+    await DB.config.salvar("sp_field_map_ssma", null);
   }
 
   return {
