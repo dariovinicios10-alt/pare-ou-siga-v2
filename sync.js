@@ -21,44 +21,25 @@ const Sync = (() => {
   let _fieldMap = null;  // { displayName → internalName }
   let _syncing = false;
 
-  /* ==========================================================
-     RESOLUÇÃO DE IDs DO SHAREPOINT (com cache em config)
-     ========================================================== */
-  async function resolveSiteId(token) {
-    if (_siteId) return _siteId;
-    const cached = await DB.config.obter("sp_site_id");
-    if (cached) { _siteId = cached; return _siteId; }
+   async function resolveDriveId(token) {
+  if (_driveId) return _driveId;
+  const cached = await DB.config.obter("sp_drive_id_fotos");
+  if (cached) { _driveId = cached; return _driveId; }
 
-    const resp = await graphGet(`/sites/${SP_HOST}:${SP_SITE_PATH}`, token);
-    _siteId = resp.id;
-    await DB.config.salvar("sp_site_id", _siteId);
-    return _siteId;
+  const siteId = await resolveSiteId(token);
+  
+  // Busca diretamente nas bibliotecas de documentos (drives) do site
+  const resp = await graphGet(`/sites/${siteId}/drives`, token);
+  const drive = (resp.value || []).find(d => d.name === LIB_NAME);
+
+  if (!drive) {
+    throw new Error(`Biblioteca de documentos '${LIB_NAME}' não foi encontrada no site.`);
   }
 
-  async function resolveListId(token) {
-    if (_listId) return _listId;
-    const cached = await DB.config.obter("sp_list_id_ssma");
-    if (cached) { _listId = cached; return _listId; }
-
-    const siteId = await resolveSiteId(token);
-    const resp = await graphGet(`/sites/${siteId}/lists/${encodeURIComponent(LIST_NAME)}`, token);
-    _listId = resp.id;
-    await DB.config.salvar("sp_list_id_ssma", _listId);
-    return _listId;
-  }
-
-  async function resolveDriveId(token) {
-    if (_driveId) return _driveId;
-    const cached = await DB.config.obter("sp_drive_id_fotos");
-    if (cached) { _driveId = cached; return _driveId; }
-
-    const siteId = await resolveSiteId(token);
-    const resp = await graphGet(`/sites/${siteId}/lists/${encodeURIComponent(LIB_NAME)}/drive`, token);
-    _driveId = resp.id;
-    await DB.config.salvar("sp_drive_id_fotos", _driveId);
-    return _driveId;
-  }
-
+  _driveId = drive.id;
+  await DB.config.salvar("sp_drive_id_fotos", _driveId);
+  return _driveId;
+}
   /* ==========================================================
      MAPEAMENTO DE NOMES DE COLUNAS (display → internal)
      O SharePoint pode criar nomes internos diferentes dos
