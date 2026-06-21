@@ -148,7 +148,10 @@ const Auth = (() => {
     // Decodifica nome do usuário do id_token (JWT payload)
     if (data.id_token) {
       try {
-        const payload = JSON.parse(atob(data.id_token.split(".")[1]));
+        // JWT payload é UTF-8; atob retorna Latin-1, precisa converter
+        const b64 = data.id_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+        const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+        const payload = JSON.parse(new TextDecoder().decode(bytes));
         _user = { name: payload.name || "", email: payload.preferred_username || "" };
       } catch (_) {}
     }
