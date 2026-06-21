@@ -77,11 +77,15 @@ const Sync = (() => {
       `/sites/${siteId}/lists/${listId}/columns?$select=name,displayName`, token
     );
 
-    // Monta mapa: displayName → name (interno)
+    // Monta mapa: displayName → name (interno), excluindo read-only
     const map = {};
     (resp.value || []).forEach((col) => {
+      // Pula campos computados / read-only conhecidos
+      if (col.readOnly || CAMPOS_READONLY.has(col.name)) return;
       map[col.displayName] = col.name;
     });
+    // Garante que Title sempre exista no mapa
+    map["Title"] = "Title";
 
     console.log("SharePoint field map:", map);
     _fieldMap = map;
@@ -90,11 +94,28 @@ const Sync = (() => {
   }
 
   // Traduz um objeto {displayName: valor} → {internalName: valor}
+  // Pula campos somente-leitura do SharePoint
+  const CAMPOS_READONLY = new Set([
+    "LinkTitle", "LinkTitleNoMenu", "_UIVersionString",
+    "Edit", "DocIcon", "ItemChildCount", "FolderChildCount",
+  ]);
+
   function mapearCampos(fields, fieldMap) {
     const mapped = {};
     for (const [displayName, valor] of Object.entries(fields)) {
+      // "Title" é sempre gravável com o nome interno "Title"
+      if (displayName === "Title") {
+        mapped["Title"] = valor;
+        continue;
+      }
       const internal = fieldMap[displayName] || displayName;
-      mapped[internal] = valor;
+      // Pula se o mapeamento caiu em um campo read-only
+      if (CAMPOS_READONLY.has(internal)) {
+        console.warn(`Campo ${displayName} → ${internal} é read-only, usando nome original.`);
+        mapped[displayName] = valor;
+      } else {
+        mapped[internal] = valor;
+      }
     }
     return mapped;
   }
