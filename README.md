@@ -78,9 +78,64 @@ backup ou para consolidar em outro computador.
 
 ---
 
-## 4. Fase 2 / Fase 3 (futuro)
+## 4. Integração Microsoft 365 (SharePoint)
 
-`sync.js` já define o contrato de integração com a futura API
-**Spring Boot + PostgreSQL** (`exportAudits`, `exportPhotos`, `importAudits`,
-`importPhotos`, `enviarTudo`). Basta chamar `Sync.configurar("https://sua-api")`
-quando o servidor existir. Nada disso é necessário agora.
+O app sincroniza auditorias e fotos com o SharePoint da Caminhos da Celulose
+via Microsoft Graph API. O fluxo é **offline-first**: dados sempre salvam no
+dispositivo (IndexedDB) e sincronizam automaticamente quando há conexão.
+
+### 4.1 Redirect URI no Azure Entra ID
+
+No portal [Azure Entra ID → Registros de aplicativo → "Levantamento Rodoviario"](https://entra.microsoft.com):
+
+1. Vá em **Autenticação → Plataformas → Aplicativo de página única (SPA)**.
+2. Adicione o URI de redirecionamento do GitHub Pages:
+   `https://SEU-USUARIO.github.io/NOME-DO-REPO/`
+   (com barra no final).
+3. Salve.
+
+### 4.2 Criar a lista "Auditorias_SSMA" no SharePoint
+
+No site `caminhosdacelulose.sharepoint.com/sites/conservacao`:
+
+1. **Conteúdos do site → Nova → Lista → Lista em branco**.
+2. Nome: **Auditorias_SSMA**.
+3. Crie as colunas abaixo (todas em **Linha de texto única** exceto onde indicado):
+
+| Nome interno       | Tipo                          | Observação                    |
+|--------------------|-------------------------------|-------------------------------|
+| Title              | (já existe)                   | ID da auditoria (AUD-00001)   |
+| Auditor            | Linha de texto                |                               |
+| Empresa            | Linha de texto                |                               |
+| Rodovia            | Linha de texto                |                               |
+| KM                 | Número (2 decimais)           |                               |
+| Sentido            | Linha de texto                |                               |
+| Servico            | Linha de texto                |                               |
+| DataAuditoria      | Linha de texto                | Formato YYYY-MM-DD            |
+| Hora               | Linha de texto                |                               |
+| Conformidade       | Número (0 decimais)           | Percentual 0–100              |
+| QtdConforme        | Número (0 decimais)           |                               |
+| QtdNaoConforme     | Número (0 decimais)           |                               |
+| QtdNaoAplicavel    | Número (0 decimais)           |                               |
+| ItensJSON          | Várias linhas de texto (simples) | JSON completo do checklist |
+
+### 4.3 Criar a biblioteca "Fotos_Auditorias"
+
+1. **Conteúdos do site → Nova → Biblioteca de documentos**.
+2. Nome: **Fotos_Auditorias**.
+3. Pronto. O app cria pastas automaticamente: `{Empresa}/{YYYY-MM-DD}/`.
+
+### 4.4 Como funciona a sincronização
+
+- **Login**: botão "Entrar com Microsoft" na tela inicial.
+- **Auto-sync**: ao salvar uma auditoria, se online e logado, sincroniza
+  automaticamente. Também sincroniza a cada 5 min e ao voltar a ficar online.
+- **Sync manual**: botão "Sincronizar agora" na tela inicial.
+- **Indicadores**: cada auditoria mostra se está pendente, sincronizada ou com erro.
+- **Offline total**: se não houver conexão, salva local e sincroniza depois.
+
+### 4.5 Permissões necessárias (já concedidas no App Registration)
+
+- `User.Read` — nome do usuário logado
+- `Sites.ReadWrite.All` — leitura/escrita na lista e biblioteca
+- `offline_access` — refresh token para sessão persistente
