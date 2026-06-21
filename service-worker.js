@@ -4,7 +4,7 @@
    Estratégia: cache-first com atualização em segundo plano.
    ===================================================================== */
 
-const CACHE = "pare-ou-siga-v3";
+const CACHE = "pare-ou-siga-v4";
 
 const ARQUIVOS = [
   "./",
@@ -13,6 +13,7 @@ const ARQUIVOS = [
   "./app.js",
   "./database.js",
   "./dashboard.js",
+  "./auth.js",
   "./sync.js",
   "./manifest.json",
   "./lib/chart.umd.js",
@@ -39,6 +40,12 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
+  // Não intercepta chamadas à Microsoft (auth/Graph) nem CDNs externas
+  const url = e.request.url;
+  if (url.includes("login.microsoftonline.com") ||
+      url.includes("graph.microsoft.com") ||
+      url.includes("sharepoint.com")) return;
+
   e.respondWith(
     caches.match(e.request).then((cacheado) => {
       const rede = fetch(e.request)
