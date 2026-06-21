@@ -428,6 +428,7 @@ async function concluirAuditoria() {
   estado.resumo = calcularResumo();
   estado.status = "concluida";
   estado.concluidoEm = Date.now();
+  estado.syncStatus = "pending"; // marca como pendente de sync
 
   const id = await DB.auditorias.salvar(estado);
 
@@ -439,7 +440,7 @@ async function concluirAuditoria() {
     if (blob) {
       nSeq++;
       await DB.fotos.salvar({
-        auditId: id, blob,
+        auditId: id, blob, synced: false,
         categoria: it.categoria, item: it.item,
         nomeArquivo: nomeArquivoFoto(estado, nSeq),
       });
@@ -448,6 +449,14 @@ async function concluirAuditoria() {
 
   toast("Auditoria salva com sucesso.");
   estado = null; fotosTemp = {};
+
+  // Tenta sincronizar em background se autenticado e online
+  if (Auth.isLoggedIn() && navigator.onLine) {
+    Sync.syncAll().then((r) => {
+      if (r.ok && r.sincronizadas > 0) toast("Sincronizado com SharePoint.");
+    }).catch(() => {});
+  }
+
   irPara("home");
 }
 
@@ -472,6 +481,11 @@ async function listarPendentes() {
   el.innerHTML = todas.map((a) => {
     const r = a.resumo || calcularResumoDe(a);
     const flag = a.divergenciaContratual ? `<span class="tag-flag">&#9888; contrato</span>` : "";
+    const syncBadge = a.syncStatus === "synced"
+      ? `<span class="tag-sync ok">&#9729; sincronizado</span>`
+      : a.syncStatus === "error"
+      ? `<span class="tag-sync erro">&#9888; erro sync</span>`
+      : `<span class="tag-sync pendente">&#8226; pendente</span>`;
     return `
       <div class="card-aud">
         <div class="card-head">
@@ -479,7 +493,7 @@ async function listarPendentes() {
           <span class="conf-badge ${corConformidade(r.conformidade)}">${r.conformidade}%</span>
         </div>
         <div class="card-meta">${a.auditor ? `<strong>${a.auditor}</strong> • ` : ""}${a.rodovia} • KM ${a.km} • ${a.sentido} • ${a.servico}</div>
-        <div class="card-meta">${dataBR(a.data)} ${a.hora} ${flag}</div>
+        <div class="card-meta">${dataBR(a.data)} ${a.hora} ${flag} ${syncBadge}</div>
         <div class="card-mini">
           <span class="chip verde">${r.conforme}C</span>
           <span class="chip vermelho">${r.naoConforme}NC</span>
@@ -671,24 +685,89 @@ async function cfgAtivo(nome, ativo) {
 }
 
 /* ============================================================
+   AUTENTICAÇÃO E SINCRONIZAÇÃO (UI)
+   ============================================================ */
+async function toggleAuth() {
+  if (Auth.isLoggedIn()) {
+    Auth.logout();
+    atualizarAuthUI();
+    toast("Logout realizado.");
+  } else {
+    Auth.login(); // redireciona para Microsoft
+  }
+}
+
+function atualizarAuthUI() {
+  const user = Auth.getUser();
+  const logado = Auth.isLoggedIn();
+  const userEl = $("#auth-user");
+  const btnEl = $("#btn-auth");
+  const syncBtn = $("#home-sync");
+
+  if (userEl) userEl.textContent = logado && user ? user.name || user.email : "Não conectado";
+  if (btnEl) {
+    btnEl.textContent = logado ? "Sair" : "Entrar com Microsoft";
+    btnEl.className = logado ? "btn-auth logado" : "btn-auth";
+  }
+  if (syncBtn) syncBtn.hidden = !logado;
+}
+
+async function syncManual() {
+  if (!Auth.isLoggedIn()) { toast("Faça login primeiro.", "erro"); return; }
+  if (!navigator.onLine) { toast("Sem conexão com a internet.", "erro"); return; }
+
+  toast("Sincronizando…");
+  const result = await Sync.syncAll();
+  if (result.ok) {
+    if (result.total === 0) toast("Nada pendente para sincronizar.");
+    else toast(`${result.sincronizadas} auditoria(s) sincronizada(s)${result.erros ? `, ${result.erros} com erro` : ""}.`);
+  } else {
+    toast(result.motivo || "Erro na sincronização.", "erro");
+  }
+  // atualiza listagem se visível
+  if ($("#view-pendentes").classList.contains("active")) listarPendentes();
+}
+
+/* ============================================================
    INICIALIZAÇÃO
    ============================================================ */
 async function init() {
   await DB.open();
   await DB.seed();
 
-  // registra service worker
+  // 1. Trata retorno do login Microsoft (redirect com ?code=...)
+  try {
+    const voltouDoLogin = await Auth.handleRedirect();
+    if (voltouDoLogin) toast("Login realizado com sucesso.");
+  } catch (e) {
+    console.error("Erro ao processar login:", e);
+  }
+
+  // 2. Atualiza UI de autenticação
+  atualizarAuthUI();
+
+  // 3. Registra service worker
   if ("serviceWorker" in navigator) {
     try { await navigator.serviceWorker.register("./service-worker.js"); } catch (e) { /* offline ok */ }
   }
 
-  // botões da home
+  // 4. Inicia auto-sync
+  Sync.initAutoSync();
+  Sync.verificarStatusInicial();
+
+  // 5. Botões da home
   $("#home-nova")?.addEventListener("click", novaAuditoria);
   $("#home-painel")?.addEventListener("click", () => irPara("painel"));
   $("#home-empresas")?.addEventListener("click", () => irPara("empresas"));
   $("#home-pendentes")?.addEventListener("click", () => irPara("pendentes"));
   $("#home-export")?.addEventListener("click", () => irPara("exportacoes"));
   $("#home-config")?.addEventListener("click", abrirConfigEmpresas);
+  $("#home-sync")?.addEventListener("click", syncManual);
+
+  // 6. Se logado, tenta sync automático na abertura
+  if (Auth.isLoggedIn() && navigator.onLine) {
+    setTimeout(syncManual, 3000); // aguarda 3s para UI montar
+  }
 
   irPara("home");
 }
