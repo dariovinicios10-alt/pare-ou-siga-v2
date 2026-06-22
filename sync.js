@@ -49,12 +49,34 @@ const Sync = (() => {
 
   async function resolveDriveId(token) {
     if (_driveId) return _driveId;
-    const cached = await DB.config.obter("sp_drive_id_fotos");
+    var cached = await DB.config.obter("sp_drive_id_fotos_v2");
     if (cached) { _driveId = cached; return _driveId; }
-    const siteId = await resolveSiteId(token);
-    const resp = await graphGet("/sites/" + siteId + "/lists/" + encodeURIComponent(LIB_NAME) + "/drive", token);
-    _driveId = resp.id;
-    await DB.config.salvar("sp_drive_id_fotos", _driveId);
+
+    var siteId = await resolveSiteId(token);
+
+    /* Lista todos os drives do site e encontra pelo nome,
+       ignorando ponto ou espaco extra que o SharePoint possa ter adicionado */
+    var resp = await graphGet("/sites/" + siteId + "/drives", token);
+    var drives = resp.value || [];
+    var drive = null;
+
+    for (var i = 0; i < drives.length; i++) {
+      var nome = (drives[i].name || "").replace(/[\.\s]+$/, "");
+      if (nome === "Fotos_Auditorias" || nome === LIB_NAME) {
+        drive = drives[i];
+        break;
+      }
+    }
+
+    if (!drive) {
+      console.error("Drives disponiveis:", drives.map(function(d) { return d.name; }));
+      throw new Error("Biblioteca de fotos nao encontrada. Drives: " +
+        drives.map(function(d) { return d.name; }).join(", "));
+    }
+
+    _driveId = drive.id;
+    console.log("Drive de fotos encontrado:", drive.name, "->", drive.id);
+    await DB.config.salvar("sp_drive_id_fotos_v2", _driveId);
     return _driveId;
   }
 
@@ -360,6 +382,7 @@ const Sync = (() => {
     await DB.config.salvar("sp_site_id", null);
     await DB.config.salvar("sp_list_id_ssma", null);
     await DB.config.salvar("sp_drive_id_fotos", null);
+    await DB.config.salvar("sp_drive_id_fotos_v2", null);
     await DB.config.salvar("sp_field_map_ssma_v2", null);
   }
 
